@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Temi Remote Control</string>
+
+    <!-- Permission Explanations -->
+    <string name="permission_face_recognition_explanation">This permission allows the app to use face recognition features for enhanced user interaction during remote sessions.</string>
+    <string name="permission_settings_explanation">This permission allows the app to access robot settings for optimal streaming and control configuration.</string>
+    <string name="permission_sequence_explanation">This permission allows the app to create and manage movement sequences for advanced remote control.</string>
+    <string name="permission_map_explanation">This permission allows the app to access and manage saved locations on the robot\'s map for navigation features.</string>
+
+    <!-- UI Strings -->
+    <string name="start_stream">Start Stream &amp; Control</string>
+    <string name="stop_stream">Stop Stream</string>
+    <string name="connecting">Connecting...</string>
+    <string name="connected">Connected</string>
+    <string name="disconnected">Disconnected</string>
+    <string name="robot_ready">Robot Ready</string>
+    <string name="robot_not_ready">Robot Not Ready</string>
+    <string name="streaming_active">Streaming Active</string>
+    <string name="control_active">Robot Control Active</string>
+
+    <!-- Error Messages -->
+    <string name="error_camera_permission">Camera permission is required for video streaming</string>
+    <string name="error_microphone_permission">Microphone permission is required for audio streaming</string>
+    <string name="error_network_permission">Network permissions are required for remote control</string>
+    <string name="error_robot_not_connected">Robot is not connected</string>
+    <string name="error_webrtc_failed">Failed to initialize video streaming</string>
+    <string name="error_websocket_failed">Failed to connect to signaling server</string>
+
+    <!-- Status Messages -->
+    <string name="status_initializing">Initializing robot control system...</string>
+    <string name="status_waiting_robot">Waiting for robot to be ready...</string>
+    <string name="status_starting_stream">Starting video stream...</string>
+    <string name="status_stream_active">Live stream active - Robot control ready</string>
+    <string name="status_stopping_stream">Stopping video stream...</string>
+    <string name="status_emergency_stop">EMERGENCY STOP ACTIVATED</string>
+
+    <!-- Robot Commands -->
+    <string name="command_move_forward">Move Forward</string>
+    <string name="command_move_backward">Move Backward</string>
+    <string name="command_move_left">Move Left</string>
+    <string name="command_move_right">Move Right</string>
+    <string name="command_turn_left">Turn Left</string>
+    <string name="command_turn_right">Turn Right</string>
+    <string name="command_stop">Stop</string>
+    <string name="command_emergency_stop">Emergency Stop</string>
+    <string name="command_go_home">Go Home</string>
+    <string name="command_follow_me">Follow Me</string>
+    <string name="command_save_location">Save Location</string>
+    <string name="command_speak">Speak</string>
+    <string name="command_tilt_up">Tilt Head Up</string>
+    <string name="command_tilt_down">Tilt Head Down</string>
+    <string name="command_tilt_center">Center Head</string>
+
+    <!-- Navigation -->
+    <string name="navigation_going_to">Going to %s</string>
+    <string name="navigation_arrived">Arrived at %s</string>
+    <string name="navigation_failed">Navigation to %s failed</string>
+    <string name="navigation_cancelled">Navigation cancelled</string>
+
+    <!-- Location Management -->
+    <string name="location_saved">Location saved: %s</string>
+    <string name="location_deleted">Location deleted: %s</string>
+    <string name="location_save_failed">Failed to save location</string>
+    <string name="location_delete_failed">Failed to delete location</string>
+    <string name="no_locations_available">No saved locations available</string>
+
+    <!-- Settings -->
+    <string name="settings_stream_quality">Stream Quality</string>
+    <string name="settings_movement_speed">Movement Speed</string>
+    <string name="settings_auto_start">Auto Start on Launch</string>
+    <string name="settings_connection_timeout">Connection Timeout (seconds)</string>
+
+    <!-- Notifications -->
+    <string name="notification_streaming_title">Temi Remote Control Active</string>
+    <string name="notification_streaming_content">Video streaming and remote control are active</string>
+    <string name="notification_channel_name">Remote Control Service</string>
+    <string name="notification_channel_description">Notifications for remote control sessions</string>
+
+</resources>

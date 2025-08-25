@@ -1,0 +1,1451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Temi Robot Control</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            z-index: 10;
+        }
+        
+        .header h1 {
+            font-size: 2.2rem;
+            background: linear-gradient(45deg, #4CAF50, #45a049, #66BB6A);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 5px;
+            text-shadow: 0 0 30px rgba(76, 175, 80, 0.3);
+        }
+        
+        .header p {
+            color: #b0b0b0;
+            font-size: 1rem;
+        }
+
+        .url-config {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255,255,255,0.2);
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .url-input {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        #websocketUrl {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            font-size: 14px;
+        }
+
+        #websocketUrl::placeholder {
+            color: rgba(255,255,255,0.5);
+        }
+        
+        .main-container {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 20px;
+            width: 100%;
+            max-width: 1400px;
+            height: calc(100vh - 300px);
+        }
+        
+        #videoContainer {
+            position: relative;
+            background: linear-gradient(135deg, #1e1e1e, #2d2d2d);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 
+                0 8px 32px rgba(0,0,0,0.4),
+                0 0 0 1px rgba(255,255,255,0.1),
+                inset 0 1px 0 rgba(255,255,255,0.1);
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        #videoContainer:hover {
+            transform: translateY(-2px);
+            box-shadow: 
+                0 12px 40px rgba(0,0,0,0.5),
+                0 0 0 1px rgba(76, 175, 80, 0.3),
+                inset 0 1px 0 rgba(255,255,255,0.1);
+        }
+        
+        #remoteVideo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            border-radius: 20px;
+        }
+        
+        .video-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 20px;
+            transition: opacity 0.3s ease;
+        }
+        
+        .video-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(76, 175, 80, 0.3);
+            border-top: 4px solid #4CAF50;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .control-panel {
+            background: rgba(0,0,0,0.4);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            max-height: 100%;
+            overflow-y: auto;
+        }
+        
+        .control-section {
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            padding: 15px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .control-section h3 {
+            color: #4CAF50;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .status-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 15px;
+            background: rgba(76, 175, 80, 0.1);
+            border-radius: 8px;
+            border: 1px solid rgba(76, 175, 80, 0.3);
+            margin-bottom: 15px;
+        }
+        
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #666;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-indicator.connected {
+            background: #4CAF50;
+        }
+        
+        .status-indicator.connecting {
+            background: #FF9800;
+        }
+        
+        .status-indicator.error {
+            background: #f44336;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .movement-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-rows: 1fr 1fr 1fr;
+            gap: 10px;
+            height: 150px;
+        }
+        
+        .move-btn {
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            border: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            user-select: none;
+        }
+        
+        .move-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+        }
+        
+        .move-btn:active {
+            transform: scale(0.95);
+            box-shadow: 0 2px 8px rgba(76, 175, 80, 0.6);
+        }
+        
+        .move-btn:disabled {
+            background: linear-gradient(135deg, #666, #555);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .move-forward { grid-column: 2; grid-row: 1; }
+        .move-left { grid-column: 1; grid-row: 2; }
+        .move-stop { grid-column: 2; grid-row: 2; background: linear-gradient(135deg, #f44336, #d32f2f); }
+        .move-right { grid-column: 3; grid-row: 2; }
+        .move-backward { grid-column: 2; grid-row: 3; }
+        .turn-left { grid-column: 1; grid-row: 1; }
+        .turn-right { grid-column: 3; grid-row: 1; }
+        .turn-around { grid-column: 1; grid-row: 3; }
+        .home-btn { grid-column: 3; grid-row: 3; background: linear-gradient(135deg, #FF9800, #F57C00); }
+        
+        .speech-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .speech-input {
+            display: flex;
+            gap: 10px;
+        }
+        
+        #speechText {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            font-size: 14px;
+        }
+        
+        #speechText::placeholder {
+            color: rgba(255,255,255,0.5);
+        }
+        
+        .action-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #2196F3, #1976D2);
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            border: 1px solid rgba(255,255,255,0.1);
+            white-space: nowrap;
+        }
+        
+        .action-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(33, 150, 243, 0.4);
+        }
+        
+        .action-btn:disabled {
+            background: linear-gradient(135deg, #666, #555);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .location-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .location-input {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        #locationSelect {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            font-size: 14px;
+        }
+        
+        #locationSelect option {
+            background: #1a1a2e;
+            color: white;
+        }
+
+        .tilt-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .tilt-slider-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .tilt-slider {
+            flex: 1;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 5px;
+            border-radius: 5px;
+            background: rgba(255,255,255,0.2);
+            outline: none;
+        }
+
+        .tilt-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4CAF50;
+            cursor: pointer;
+            border: 2px solid white;
+        }
+
+        .tilt-slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4CAF50;
+            cursor: pointer;
+            border: 2px solid white;
+        }
+
+        .angle-display {
+            min-width: 40px;
+            text-align: center;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        
+        .quick-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .emergency-btn {
+            background: linear-gradient(135deg, #f44336, #d32f2f) !important;
+        }
+        
+        .emergency-btn:hover {
+            box-shadow: 0 4px 15px rgba(244, 67, 54, 0.4) !important;
+        }
+        
+        .connection-info {
+            font-size: 12px;
+            color: #b0b0b0;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .location-list {
+            max-height: 120px;
+            overflow-y: auto;
+            background: rgba(255,255,255,0.05);
+            border-radius: 5px;
+            padding: 10px;
+            margin-top: 10px;
+        }
+
+        .location-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .location-item:last-child {
+            border-bottom: none;
+        }
+
+        .location-name {
+            flex: 1;
+            color: #b0b0b0;
+            font-size: 12px;
+        }
+
+        .location-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .location-btn {
+            padding: 2px 8px;
+            font-size: 10px;
+            background: linear-gradient(135deg, #666, #555);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .location-btn:hover {
+            background: linear-gradient(135deg, #777, #666);
+        }
+
+        .location-btn.go {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+        }
+
+        .location-btn.delete {
+            background: linear-gradient(135deg, #f44336, #d32f2f);
+        }
+
+        #status {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: 600;
+            text-align: center;
+            min-width: 200px;
+            border: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        
+        .connecting {
+            background: linear-gradient(135deg, rgba(255, 152, 0, 0.9), rgba(255, 193, 7, 0.9));
+            box-shadow: 0 0 20px rgba(255, 152, 0, 0.3);
+        }
+        
+        .connected {
+            background: linear-gradient(135deg, rgba(76, 175, 80, 0.9), rgba(102, 187, 106, 0.9));
+            box-shadow: 0 0 20px rgba(76, 175, 80, 0.4);
+        }
+        
+        .disconnected {
+            background: linear-gradient(135deg, rgba(244, 67, 54, 0.9), rgba(229, 57, 53, 0.9));
+            box-shadow: 0 0 20px rgba(244, 67, 54, 0.3);
+        }
+        
+        .error {
+            background: linear-gradient(135deg, rgba(211, 47, 47, 0.9), rgba(198, 40, 40, 0.9));
+            box-shadow: 0 0 20px rgba(211, 47, 47, 0.4);
+        }
+        
+        /* Responsive design */
+        @media (max-width: 1024px) {
+            .main-container {
+                grid-template-columns: 1fr;
+                grid-template-rows: 60vh 1fr;
+                height: auto;
+            }
+            
+            .control-panel {
+                max-height: 40vh;
+            }
+            
+            .header h1 {
+                font-size: 1.8rem;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.6rem;
+            }
+            
+            .main-container {
+                gap: 15px;
+                grid-template-rows: 50vh 1fr;
+            }
+            
+            .control-panel {
+                padding: 15px;
+                gap: 15px;
+            }
+            
+            .movement-controls {
+                height: 120px;
+                gap: 8px;
+            }
+            
+            .move-btn {
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Enhanced Temi Robot Control</h1>
+        <p>Advanced live streaming with comprehensive robot control</p>
+    </div>
+
+    <div class="url-config">
+        <div class="url-input">
+            <input type="text" id="websocketUrl" placeholder="Enter WebSocket URL (e.g., ws://localhost:3000 or wss://yourngrok.ngrok-free.app)" value="ws://localhost:3000">
+            <button class="action-btn" onclick="updateWebSocketUrl()">Update URL</button>
+        </div>
+        <p style="font-size: 12px; color: #b0b0b0;">Current URL will be shown in connection status</p>
+    </div>
+    
+    <div class="main-container">
+        <div id="videoContainer">
+            <video id="remoteVideo" autoplay playsinline muted></video>
+            <div class="video-overlay" id="videoOverlay">
+                <div class="loading-spinner"></div>
+                <p style="margin-top: 10px;">Connecting to robot...</p>
+            </div>
+        </div>
+        
+        <div class="control-panel">
+            <div class="status-bar">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div class="status-indicator" id="connectionIndicator"></div>
+                    <span id="connectionStatus">Disconnected</span>
+                </div>
+                <button class="action-btn" id="reconnectBtn" onclick="reconnectWebSocket()">🔄 Reconnect</button>
+            </div>
+            
+            <div class="control-section">
+                <h3>🎮 Movement Control</h3>
+                <div class="movement-controls">
+                    <button class="move-btn turn-left" onmousedown="startMove('turn_left')" onmouseup="stopMove()" ontouchstart="startMove('turn_left')" ontouchend="stopMove()">↶</button>
+                    <button class="move-btn move-forward" onmousedown="startMove('forward')" onmouseup="stopMove()" ontouchstart="startMove('forward')" ontouchend="stopMove()">↑</button>
+                    <button class="move-btn turn-right" onmousedown="startMove('turn_right')" onmouseup="stopMove()" ontouchstart="startMove('turn_right')" ontouchend="stopMove()">↷</button>
+                    <button class="move-btn move-left" onmousedown="startMove('left')" onmouseup="stopMove()" ontouchstart="startMove('left')" ontouchend="stopMove()">←</button>
+                    <button class="move-btn move-stop" onclick="sendCommand('stop')">STOP</button>
+                    <button class="move-btn move-right" onmousedown="startMove('right')" onmouseup="stopMove()" ontouchstart="startMove('right')" ontouchend="stopMove()">→</button>
+                    <button class="move-btn turn-around" onclick="sendCommand('turn_around')">↻</button>
+                    <button class="move-btn move-backward" onmousedown="startMove('backward')" onmouseup="stopMove()" ontouchstart="startMove('backward')" ontouchend="stopMove()">↓</button>
+                    <button class="move-btn home-btn" onclick="sendCommand('go_home')">🏠</button>
+                </div>
+            </div>
+            
+            <div class="control-section">
+                <h3>🎯 Head Tilt Control</h3>
+                <div class="tilt-slider-container">
+                    <div class="slider-container">
+                        <span>Down</span>
+                        <input type="range" id="tiltSlider" class="tilt-slider" min="-25" max="55" value="0" oninput="updateTiltAngle(this.value)">
+                        <span>Up</span>
+                        <div class="angle-display" id="tiltAngleDisplay">0°</div>
+                    </div>
+                    <div class="tilt-controls">
+                        <button class="action-btn" onclick="tiltByAngle(-10)">⬇ Down</button>
+                        <button class="action-btn" onclick="sendCommand('reset_tilt')">🎯 Center</button>
+                        <button class="action-btn" onclick="tiltByAngle(10)">⬆ Up</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="control-section">
+                <h3>💬 Speech Control</h3>
+                <div class="speech-controls">
+                    <div class="speech-input">
+                        <input type="text" id="speechText" placeholder="Enter text for Temi to speak..." maxlength="200">
+                        <button class="action-btn" onclick="speak()">🗣️ Speak</button>
+                    </div>
+                    <div class="quick-actions">
+                        <button class="action-btn" onclick="sendQuickSpeech('Hello, I am Temi robot')">👋 Greet</button>
+                        <button class="action-btn" onclick="sendQuickSpeech('How can I help you today?')">❓ Help</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="control-section">
+                <h3>📍 Navigation & Locations</h3>
+                <div class="location-controls">
+                    <div class="location-input">
+                        <select id="locationSelect">
+                            <option value="">Select location...</option>
+                        </select>
+                        <button class="action-btn" onclick="goToLocation()">🎯 Go</button>
+                    </div>
+                    <div class="quick-actions">
+                        <button class="action-btn" onclick="saveCurrentLocation()">💾 Save Here</button>
+                        <button class="action-btn" onclick="sendCommand('follow_me')">👥 Follow</button>
+                        <button class="action-btn" onclick="sendCommand('stop_follow')">⏹️ Stop Follow</button>
+                        <button class="action-btn" onclick="refreshLocations()">🔄 Refresh</button>
+                    </div>
+                    <div class="location-list" id="locationList">
+                        <p style="color: #666; text-align: center; font-size: 12px;">No locations loaded</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="control-section">
+                <h3>⚡ Quick Actions</h3>
+                <div class="quick-actions">
+                    <button class="action-btn" onclick="sendCommand('turn_by', {degrees: 90})">↻ Turn 90°</button>
+                    <button class="action-btn" onclick="sendCommand('turn_by', {degrees: -90})">↺ Turn -90°</button>
+                    <button class="action-btn" onclick="sendCommand('get_battery_info')">🔋 Battery</button>
+                    <button class="action-btn" onclick="setVolume()">🔊 Volume</button>
+                    <button class="action-btn emergency-btn" onclick="sendCommand('emergency_stop')">🚨 Emergency</button>
+                </div>
+            </div>
+            
+            <div class="control-section">
+                <h3>📊 Status & Info</h3>
+                <div class="connection-info">
+                    <div class="info-row">
+                        <span>WebSocket URL:</span>
+                        <span id="currentUrl">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span>Robot Position:</span>
+                        <span id="robotPosition">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span>Head Tilt:</span>
+                        <span id="currentTilt">0°</span>
+                    </div>
+                    <div class="info-row">
+                        <span>Navigation Status:</span>
+                        <span id="navigationStatus">Idle</span>
+                    </div>
+                    <div class="info-row">
+                        <span>Commands Sent:</span>
+                        <span id="commandCount">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="status" class="connecting">Connecting to server...</div>
+
+    <script>
+        // Configuration
+        let WEBSOCKET_URL = 'wss://2cbbe6c1a348.ngrok-free.app';
+        
+        let ws = null;
+        let pc = null;
+        let dataChannel = null;
+        let reconnectAttempts = 0;
+        let maxReconnectAttempts = 5;
+        let reconnectDelay = 1000;
+        let isMoving = false;
+        let moveInterval = null;
+        let commandCount = 0;
+        let currentTiltAngle = 0;
+        let robotLocations = [];
+        
+        const statusEl = document.getElementById('status');
+        const videoEl = document.getElementById('remoteVideo');
+        const videoOverlay = document.getElementById('videoOverlay');
+        const reconnectBtn = document.getElementById('reconnectBtn');
+        const connectionIndicator = document.getElementById('connectionIndicator');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const currentUrlEl = document.getElementById('currentUrl');
+        const tiltSlider = document.getElementById('tiltSlider');
+        const tiltAngleDisplay = document.getElementById('tiltAngleDisplay');
+        const locationSelect = document.getElementById('locationSelect');
+        const locationList = document.getElementById('locationList');
+        
+        // WebRTC Configuration
+        const pcConfig = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:stun2.l.google.com:19302' }
+            ]
+        };
+        
+        function updateWebSocketUrl() {
+            const urlInput = document.getElementById('websocketUrl');
+            const newUrl = urlInput.value.trim();
+            
+            if (!newUrl) {
+                alert('Please enter a valid WebSocket URL');
+                return;
+            }
+            
+            try {
+                const url = new URL(newUrl);
+                if (!url.protocol.startsWith('ws')) {
+                    throw new Error('Must be a WebSocket URL (ws:// or wss://)');
+                }
+                
+                WEBSOCKET_URL = newUrl;
+                currentUrlEl.textContent = newUrl;
+                
+                if (ws) {
+                    ws.close();
+                }
+                setTimeout(() => connectWebSocket(), 500);
+                
+            } catch (error) {
+                alert('Invalid URL format: ' + error.message);
+            }
+        }
+        
+        function updateStatus(message, className = 'connecting') {
+            statusEl.textContent = message;
+            statusEl.className = className;
+            connectionStatus.textContent = message;
+            
+            connectionIndicator.className = 'status-indicator';
+            if (className === 'connected') {
+                connectionIndicator.classList.add('connected');
+            } else if (className === 'connecting') {
+                connectionIndicator.classList.add('connecting');
+            } else {
+                connectionIndicator.classList.add('error');
+            }
+            
+            console.log('Status:', message);
+        }
+
+        function updateTiltAngle(angle) {
+            currentTiltAngle = parseInt(angle);
+            tiltAngleDisplay.textContent = currentTiltAngle + '°';
+            document.getElementById('currentTilt').textContent = currentTiltAngle + '°';
+            
+            // Send tilt command to robot
+            sendCommand('tilt_to_angle', { angle: currentTiltAngle });
+        }
+
+        function tiltByAngle(deltaAngle) {
+            const newAngle = Math.max(-25, Math.min(55, currentTiltAngle + deltaAngle));
+            tiltSlider.value = newAngle;
+            updateTiltAngle(newAngle);
+        }
+
+        function updateLocationList() {
+            const select = document.getElementById('locationSelect');
+            const list = document.getElementById('locationList');
+            
+            // Update dropdown
+            select.innerHTML = '<option value="">Select location...</option>';
+            robotLocations.forEach(location => {
+                const option = document.createElement('option');
+                option.value = location;
+                option.textContent = location;
+                select.appendChild(option);
+            });
+            
+            // Update location list
+            if (robotLocations.length === 0) {
+                list.innerHTML = '<p style="color: #666; text-align: center; font-size: 12px;">No locations available</p>';
+            } else {
+                list.innerHTML = '';
+                robotLocations.forEach(location => {
+                    const item = document.createElement('div');
+                    item.className = 'location-item';
+                    item.innerHTML = `
+                        <span class="location-name">${location}</span>
+                        <div class="location-actions">
+                            <button class="location-btn go" onclick="goToSpecificLocation('${location}')">Go</button>
+                            <button class="location-btn delete" onclick="deleteLocation('${location}')">Del</button>
+                        </div>
+                    `;
+                    list.appendChild(item);
+                });
+            }
+        }
+
+        function goToSpecificLocation(location) {
+            sendCommand('go_to_location', { location: location });
+        }
+
+        function deleteLocation(location) {
+            if (confirm(`Delete location "${location}"?`)) {
+                sendCommand('delete_location', { location: location });
+            }
+        }
+
+        function saveCurrentLocation() {
+            const name = prompt('Enter location name:', 'Location_' + Date.now());
+            if (name && name.trim()) {
+                sendCommand('save_location', { name: name.trim() });
+            }
+        }
+
+        function refreshLocations() {
+            sendCommand('get_locations');
+        }
+
+        function setVolume() {
+            const volume = prompt('Enter volume level (0-100):', '50');
+            if (volume !== null && !isNaN(volume)) {
+                const vol = Math.max(0, Math.min(100, parseInt(volume)));
+                sendCommand('set_volume', { level: vol });
+            }
+        }
+        
+        function createPeerConnection() {
+            console.log('Creating peer connection...');
+            pc = new RTCPeerConnection(pcConfig);
+            
+            dataChannel = pc.createDataChannel('robotControl', {
+                ordered: true
+            });
+            
+            dataChannel.onopen = () => {
+                console.log('Data channel opened');
+                updateConnectionInfo();
+                enableControls(true);
+                // Request location list when channel opens
+                refreshLocations();
+            };
+            
+            dataChannel.onclose = () => {
+                console.log('Data channel closed');
+                updateConnectionInfo();
+                enableControls(false);
+            };
+            
+            dataChannel.onerror = (error) => {
+                console.error('Data channel error:', error);
+                updateConnectionInfo();
+            };
+
+            dataChannel.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    handleRobotMessage(data);
+                } catch (error) {
+                    console.error('Error parsing robot message:', error);
+                }
+            };
+            
+            pc.onconnectionstatechange = () => {
+                updateConnectionInfo();
+                console.log('Connection state:', pc.connectionState);
+                
+                switch(pc.connectionState) {
+                    case 'connected':
+                        updateStatus('Robot connected & ready!', 'connected');
+                        videoOverlay.classList.add('hidden');
+                        reconnectAttempts = 0;
+                        break;
+                    case 'disconnected':
+                        updateStatus('Robot disconnected', 'disconnected');
+                        videoOverlay.classList.remove('hidden');
+                        enableControls(false);
+                        break;
+                    case 'failed':
+                        updateStatus('Connection failed', 'error');
+                        videoOverlay.classList.remove('hidden');
+                        enableControls(false);
+                        setTimeout(() => reconnectWebSocket(), 3000);
+                        break;
+                    case 'connecting':
+                        updateStatus('Connecting to robot...', 'connecting');
+                        videoOverlay.classList.remove('hidden');
+                        break;
+                }
+            };
+            
+            pc.oniceconnectionstatechange = () => {
+                console.log('ICE state:', pc.iceConnectionState);
+                updateConnectionInfo();
+            };
+            
+            pc.onicecandidate = (event) => {
+                if (event.candidate && ws && ws.readyState === WebSocket.OPEN) {
+                    console.log('Sending ICE candidate');
+                    ws.send(JSON.stringify({
+                        type: 'candidate',
+                        candidate: event.candidate
+                    }));
+                }
+            };
+            
+            pc.ontrack = (event) => {
+                console.log('Received remote stream');
+                videoEl.srcObject = event.streams[0];
+                
+                videoEl.onloadedmetadata = () => {
+                    console.log('Video loaded');
+                    videoOverlay.classList.add('hidden');
+                };
+                
+                videoEl.onerror = (error) => {
+                    console.error('Video error:', error);
+                };
+            };
+            
+            pc.ondatachannel = (event) => {
+                const incomingChannel = event.channel;
+                console.log('Received data channel:', incomingChannel.label);
+                
+                incomingChannel.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        handleRobotMessage(data);
+                    } catch (error) {
+                        console.error('Error parsing robot data:', error);
+                    }
+                };
+            };
+        }
+
+        function handleRobotMessage(data) {
+            console.log('Received robot message:', data);
+            
+            switch (data.type) {
+                case 'location_update':
+                    if (data.locations) {
+                        robotLocations = data.locations;
+                        updateLocationList();
+                        console.log('Updated location list:', robotLocations);
+                    }
+                    if (data.currentPosition) {
+                        updateRobotPosition(data.currentPosition);
+                    }
+                    break;
+                    
+                case 'position_update':
+                    updateRobotPosition(data);
+                    break;
+                    
+                case 'navigation_status':
+                    document.getElementById('navigationStatus').textContent = 
+                        data.status + (data.location ? ' to ' + data.location : '');
+                    break;
+                    
+                case 'robot_response':
+                    if (data.success) {
+                        console.log('Command successful:', data.message);
+                    } else {
+                        console.warn('Command failed:', data.message);
+                        alert('Command failed: ' + data.message);
+                    }
+                    break;
+            }
+        }
+
+        function updateRobotPosition(position) {
+            if (position.x !== undefined && position.y !== undefined) {
+                document.getElementById('robotPosition').textContent = 
+                    `(${position.x.toFixed(1)}, ${position.y.toFixed(1)})`;
+            }
+            
+            if (position.tiltAngle !== undefined && position.tiltAngle !== currentTiltAngle) {
+                currentTiltAngle = position.tiltAngle;
+                tiltSlider.value = currentTiltAngle;
+                tiltAngleDisplay.textContent = currentTiltAngle + '°';
+                document.getElementById('currentTilt').textContent = currentTiltAngle + '°';
+            }
+        }
+        
+        function connectWebSocket() {
+            if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) {
+                console.log('WebSocket already connecting/connected');
+                return;
+            }
+            
+            console.log('Connecting to:', WEBSOCKET_URL);
+            updateStatus('Connecting to server...', 'connecting');
+            videoOverlay.classList.remove('hidden');
+            
+            try {
+                ws = new WebSocket(WEBSOCKET_URL);
+            } catch (error) {
+                console.error('Failed to create WebSocket:', error);
+                updateStatus('Invalid WebSocket URL', 'error');
+                return;
+            }
+            
+            const connectionTimeout = setTimeout(() => {
+                if (ws.readyState === WebSocket.CONNECTING) {
+                    console.log('Connection timeout');
+                    ws.close();
+                    updateStatus('Connection timeout', 'error');
+                    scheduleReconnect();
+                }
+            }, 10000);
+            
+            ws.onopen = () => {
+                clearTimeout(connectionTimeout);
+                console.log('WebSocket connected to:', WEBSOCKET_URL);
+                updateStatus('Connected to server, waiting for robot...', 'connecting');
+                reconnectBtn.disabled = false;
+                reconnectAttempts = 0;
+                reconnectDelay = 1000;
+                
+                ws.send(JSON.stringify({ type: 'viewer' }));
+            };
+            
+            ws.onmessage = async (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    console.log('Received message:', data.type);
+                    
+                    switch(data.type) {
+                        case 'connection_established':
+                            console.log('Connection established, server version:', data.serverVersion);
+                            break;
+                            
+                        case 'streamer-ready':
+                            updateStatus('Robot online, establishing connection...', 'connecting');
+                            break;
+                            
+                        case 'offer':
+                            console.log('Received offer from robot');
+                            if (!pc) createPeerConnection();
+                            
+                            await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+                            const answer = await pc.createAnswer();
+                            await pc.setLocalDescription(answer);
+                            
+                            ws.send(JSON.stringify({
+                                type: 'answer',
+                                answer: answer
+                            }));
+                            break;
+                            
+                        case 'candidate':
+                            if (pc && data.candidate) {
+                                console.log('Adding ICE candidate');
+                                await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+                            }
+                            break;
+                            
+                        case 'robot_response':
+                            handleRobotMessage(data);
+                            break;
+                            
+                        case 'robot_status':
+                            console.log('Robot status update:', data.status);
+                            break;
+                            
+                        case 'streamer-disconnected':
+                            updateStatus('Robot disconnected from server', 'disconnected');
+                            videoOverlay.classList.remove('hidden');
+                            enableControls(false);
+                            break;
+                            
+                        case 'pong':
+                            console.log('Received pong');
+                            break;
+                    }
+                } catch (error) {
+                    console.error('Error handling message:', error);
+                }
+            };
+            
+            ws.onclose = (event) => {
+                clearTimeout(connectionTimeout);
+                console.log('WebSocket disconnected. Code:', event.code, 'Reason:', event.reason);
+                updateStatus('Disconnected from server', 'disconnected');
+                videoOverlay.classList.remove('hidden');
+                reconnectBtn.disabled = false;
+                enableControls(false);
+                
+                if (pc) {
+                    pc.close();
+                    pc = null;
+                    dataChannel = null;
+                    updateConnectionInfo();
+                }
+                
+                if (event.code !== 1000) {
+                    scheduleReconnect();
+                }
+            };
+            
+            ws.onerror = (error) => {
+                clearTimeout(connectionTimeout);
+                console.error('WebSocket error:', error);
+                updateStatus('Connection error', 'error');
+                videoOverlay.classList.remove('hidden');
+                reconnectBtn.disabled = false;
+                enableControls(false);
+                scheduleReconnect();
+            };
+        }
+        
+        function scheduleReconnect() {
+            if (reconnectAttempts >= maxReconnectAttempts) {
+                updateStatus(`Max reconnection attempts reached. Click reconnect to try again.`, 'error');
+                return;
+            }
+            
+            reconnectAttempts++;
+            const delay = Math.min(reconnectDelay * Math.pow(2, reconnectAttempts - 1), 30000);
+            
+            updateStatus(`Reconnecting in ${delay/1000}s... (attempt ${reconnectAttempts}/${maxReconnectAttempts})`, 'connecting');
+            
+            setTimeout(() => {
+                if (!ws || ws.readyState === WebSocket.CLOSED) {
+                    connectWebSocket();
+                }
+            }, delay);
+        }
+        
+        function reconnectWebSocket() {
+            console.log('Manual reconnect requested');
+            reconnectAttempts = 0;
+            reconnectDelay = 1000;
+            
+            if (ws) {
+                ws.close();
+            }
+            if (pc) {
+                pc.close();
+                pc = null;
+                dataChannel = null;
+            }
+            
+            setTimeout(() => connectWebSocket(), 500);
+        }
+        
+        function sendCommand(command, params = {}) {
+            if (!dataChannel || dataChannel.readyState !== 'open') {
+                console.warn('Data channel not available for command:', command);
+                updateStatus('Robot not connected - cannot send commands', 'error');
+                return false;
+            }
+            
+            const commandData = {
+                type: 'robot_command',
+                command: command,
+                params: params,
+                timestamp: Date.now(),
+                commandId: Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+            };
+            
+            try {
+                dataChannel.send(JSON.stringify(commandData));
+                commandCount++;
+                updateConnectionInfo();
+                console.log('Sent command:', command, params);
+                return true;
+            } catch (error) {
+                console.error('Error sending command:', error);
+                updateStatus('Failed to send command', 'error');
+                return false;
+            }
+        }
+        
+        function startMove(direction) {
+            if (isMoving) return;
+            isMoving = true;
+            
+            console.log('Starting move:', direction);
+            
+            if (!sendCommand('move', { direction: direction, continuous: true })) {
+                isMoving = false;
+                return;
+            }
+            
+            moveInterval = setInterval(() => {
+                if (!sendCommand('move', { direction: direction, continuous: true })) {
+                    stopMove();
+                }
+            }, 200);
+        }
+        
+        function stopMove() {
+            if (!isMoving) return;
+            isMoving = false;
+            
+            console.log('Stopping move');
+            
+            if (moveInterval) {
+                clearInterval(moveInterval);
+                moveInterval = null;
+            }
+            
+            sendCommand('stop');
+        }
+        
+        function speak() {
+            const text = document.getElementById('speechText').value.trim();
+            if (!text) {
+                alert('Please enter text to speak');
+                return;
+            }
+            
+            if (sendCommand('speak', { text: text })) {
+                document.getElementById('speechText').value = '';
+            }
+        }
+        
+        function sendQuickSpeech(text) {
+            sendCommand('speak', { text: text });
+        }
+        
+        function goToLocation() {
+            const location = document.getElementById('locationSelect').value;
+            if (!location) {
+                alert('Please select a location');
+                return;
+            }
+            
+            sendCommand('go_to_location', { location: location });
+        }
+        
+        function enableControls(enabled) {
+            const controls = document.querySelectorAll('.move-btn, .action-btn');
+            controls.forEach(btn => {
+                if (btn.id !== 'reconnectBtn') {
+                    btn.disabled = !enabled;
+                }
+            });
+            
+            document.getElementById('speechText').disabled = !enabled;
+            document.getElementById('locationSelect').disabled = !enabled;
+            document.getElementById('tiltSlider').disabled = !enabled;
+        }
+        
+        function updateConnectionInfo() {
+            currentUrlEl.textContent = WEBSOCKET_URL;
+            document.getElementById('commandCount').textContent = commandCount;
+        }
+        
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+            if (isMoving) return;
+            
+            switch(e.key.toLowerCase()) {
+                case 'w':
+                case 'arrowup':
+                    e.preventDefault();
+                    startMove('forward');
+                    break;
+                case 's':
+                case 'arrowdown':
+                    e.preventDefault();
+                    startMove('backward');
+                    break;
+                case 'a':
+                case 'arrowleft':
+                    e.preventDefault();
+                    startMove('left');
+                    break;
+                case 'd':
+                case 'arrowright':
+                    e.preventDefault();
+                    startMove('right');
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    sendCommand('stop');
+                    break;
+                case 'q':
+                    e.preventDefault();
+                    startMove('turn_left');
+                    break;
+                case 'e':
+                    e.preventDefault();
+                    startMove('turn_right');
+                    break;
+                case 'r':
+                    e.preventDefault();
+                    tiltByAngle(10);
+                    break;
+                case 'f':
+                    e.preventDefault();
+                    tiltByAngle(-10);
+                    break;
+            }
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+            
+            switch(e.key.toLowerCase()) {
+                case 'w':
+                case 'arrowup':
+                case 's':
+                case 'arrowdown':
+                case 'a':
+                case 'arrowleft':
+                case 'd':
+                case 'arrowright':
+                case 'q':
+                case 'e':
+                    e.preventDefault();
+                    stopMove();
+                    break;
+            }
+        });
+        
+        // Speech input enter key
+        document.getElementById('speechText').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                speak();
+            }
+        });
+        
+        // WebSocket URL input enter key
+        document.getElementById('websocketUrl').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                updateWebSocketUrl();
+            }
+        });
+        
+        // Prevent context menu on control buttons
+        document.querySelectorAll('.move-btn, .action-btn').forEach(btn => {
+            btn.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+            });
+        });
+        
+        // Touch event handling
+        document.querySelectorAll('.move-btn').forEach(btn => {
+            btn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+            });
+            
+            btn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+            });
+            
+            btn.addEventListener('touchcancel', (e) => {
+                e.preventDefault();
+                stopMove();
+            });
+        });
+        
+        // Page visibility handling
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                if (isMoving) {
+                    stopMove();
+                }
+            } else if (!ws || ws.readyState === WebSocket.CLOSED) {
+                console.log('Page became visible, checking connection...');
+                setTimeout(() => {
+                    if (!ws || ws.readyState === WebSocket.CLOSED) {
+                        connectWebSocket();
+                    }
+                }, 1000);
+            }
+        });
+        
+        // Heartbeat to keep connection alive
+        setInterval(() => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'ping', timestamp: Date.now() }));
+            }
+        }, 30000);
+        
+        // Initialize
+        function init() {
+            console.log('Initializing Enhanced Temi Robot Control Interface');
+            
+            currentUrlEl.textContent = WEBSOCKET_URL;
+            enableControls(false);
+            updateConnectionInfo();
+            
+            // Auto-detect WebSocket URL based on current page
+            if (window.location.protocol === 'https:') {
+                const suggestedUrl = window.location.origin.replace('https:', 'wss:');
+                document.getElementById('websocketUrl').placeholder = suggestedUrl + ' (auto-detected)';
+            } else if (window.location.protocol === 'http:') {
+                const suggestedUrl = window.location.origin.replace('http:', 'ws:');
+                document.getElementById('websocketUrl').placeholder = suggestedUrl + ' (auto-detected)';
+            }
+            
+            // Initialize tilt slider
+            tiltSlider.addEventListener('input', (e) => {
+                updateTiltAngle(e.target.value);
+            });
+            
+            // Start connection
+            connectWebSocket();
+        }
+        
+        // Initialize when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    </script>
+</body>
+</html>

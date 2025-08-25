@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<skill xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Basic Skill Information -->
+    <name>Temi Remote Control</name>
+    <version>1.0</version>
+    <description>Advanced remote control and streaming for Temi robot</description>
+    <author>Your Company</author>
+    <icon>@mipmap/ic_launcher</icon>
+
+    <!-- Skill Capabilities -->
+    <capabilities>
+        <capability name="video_streaming" />
+        <capability name="remote_control" />
+        <capability name="navigation" />
+        <capability name="location_management" />
+        <capability name="speech_synthesis" />
+        <capability name="head_movement" />
+        <capability name="follow_me" />
+    </capabilities>
+
+    <!-- Voice Commands (optional) -->
+    <voice_commands>
+        <command pattern="start remote control" action="start_streaming" />
+        <command pattern="stop remote control" action="stop_streaming" />
+        <command pattern="emergency stop" action="emergency_stop" />
+    </voice_commands>
+
+    <!-- Required Permissions -->
+    <permissions>
+        <permission name="com.robotemi.permission.FACE_RECOGNITION" />
+        <permission name="com.robotemi.permission.SETTINGS" />
+        <permission name="com.robotemi.permission.SEQUENCE" />
+        <permission name="com.robotemi.permission.MAP" />
+    </permissions>
+
+    <!-- Skill Configuration -->
+    <configuration>
+        <setting name="auto_start" type="boolean" default="false" />
+        <setting name="stream_quality" type="string" default="medium" />
+        <setting name="connection_timeout" type="integer" default="30" />
+        <setting name="movement_speed" type="float" default="0.5" />
+    </configuration>
+
+</skill>
